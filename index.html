@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMI Calculator</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100vh - 20px);
+            background: linen;
+        }
+        .title {
+            letter-spacing: 0.2rem;
+        }
+
+        #bmiForm {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            text-align: center;
+        }
+        .bmi-input-group {
+            display: flex;
+            flex-direction: column;
+            margin: 0.2rem;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        input {
+            border: 1px solid grey;
+            height: 1.5rem;
+            width: 6rem;
+        }
+        input:focus {
+            background: #ffee7d;
+        }
+        .bmi-submit {
+            display: flex;
+            align-items: center;
+            margin: 1rem;
+        }
+        .bmi-submit > button {
+            border: 1px solid grey;
+            background: #ffee7d;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: 0.1s all ease-in;
+        }
+        .bmi-submit > button:hover,
+        .bmi-submit > button:focus {
+            background: #ffe32c;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 2px #6e6e6e;
+        }
+
+        #bmiScore {
+            height: 3rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .category-container {
+            width: 100%;
+            max-width: 45rem;
+            text-transform: capitalize;
+            display: flex;
+            flex-flow: row wrap;
+        }
+        .category {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            --before-display: none;
+            background-color: var(--category-color);
+            box-shadow: var(--bs);
+            transition: 0.1s all ease-in;
+        }
+        .category--underweight { --category-color: #88d1ff; --category-color-dark: #204c68; }
+        .category--normal { --category-color: #aeff5b; --category-color-dark: #3b581e; }
+        .category--overweight { --category-color: #ffb655; --category-color-dark: #644216; }
+        .category--obese { --category-color: #ff7d93; --category-color-dark: #6e2f3a; }
+
+        #bmiCalculationInfo {
+            text-align: center;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">BMI Calculator</h1>
+    <form id="bmiForm">
+        <div class="bmi-input-group">
+            <label for="weight">Weight (kg)</label>
+            <input type="number" id="weight" min=1 required step=".01"></input>
+        </div>
+        <div class="bmi-input-group">
+            <label for="height">Height (cm)</label>
+            <input type="number" id="height" min=1 required step=".01"></input>
+        </div>
+        <div class="bmi-submit">
+            <button>Go</button>
+        </div>
+    </form>
+    <div id="bmiScore"></div>
+    <div class="category-container">
+        <div class="category category--underweight">underweight <br/><18.5</div>
+        <div class="category category--normal">normal <br/>18.5 - 24.9</div>
+        <div class="category category--overweight">overweight <br/>25 - 29.9</div>
+        <div class="category category--obese">obese <br/>>30</div>
+    </div>
+    <div id="bmiCalculationInfo">
+        BMI = mass(kg) / height(m)<sup>2</sup>
+    </div>
+    <script>
+         const categories = [
+            {
+                label: 'underweight',
+                lowerBoundary: 15.0,
+                upperBoundary: 18.4,
+            },
+            {
+                label: 'normal',
+                lowerBoundary: 18.5,
+                upperBoundary: 24.9,
+            },
+            {
+                label: 'overweight',
+                lowerBoundary: 25.0,
+                upperBoundary: 29.9,
+            },
+            {
+                label: 'obese',
+                lowerBoundary: 30.0,
+                upperBoundary: 35.0,
+            },
+        ]
+
+        function getWeight() {
+            return document.querySelector('#weight').value;
+        }
+        
+        function getHeight() {
+            return document.querySelector('#height').value;
+        }
+
+        function calculateBMI() {
+            const weight = getWeight();
+            const heightiInMeters = getHeight() / 100;
+            return weight / (heightiInMeters * heightiInMeters);
+        }
+
+        const colorPoint = d3.scaleLinear()
+            .domain([15, 35])
+            .range([0, 100]);
+
+        function getBmiCategory(bmiScore) {
+            const category = categories.find(c => c.lowerBoundary <= bmiScore && c.upperBoundary >= bmiScore);
+            if (category) {
+                return category;
+            }
+            if (bmiScore < categories[0].lowerBoundary) {
+                return categories[0];
+            }
+            return categories[categories.length - 1];
+        }
+
+        function setup() {
+            document.querySelector('#bmiForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const bmiScore = calculateBMI();
+                const bmiCategory = getBmiCategory(bmiScore);
+                document.querySelector('#bmiScore').innerHTML = 'Your BMI score is ' + bmiScore.toFixed(1);
+                document.querySelectorAll('.category').forEach(e => e.style.setProperty('--bs', 'none'))
+                document.querySelector(`.category--${bmiCategory.label}`).style.setProperty('--bs', 'inset 0.5rem 0.5rem var(--category-color-dark), inset -0.5rem -0.5rem var(--category-color-dark)');
+            });
+        }
+
+        setup();
+    </script>
+</body>
+</html>
